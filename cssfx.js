@@ -1,27 +1,11 @@
 /*
- * cssFx.js - Vendor prefix polyfill for CSS3 properties - v0.9.7
+ * cssFx.js - Vendor prefix polyfill for CSS3 properties - v0.9.6
  * http://github.com/imsky/cssFx
  * (C) 2011-2012 Ivan Malopinsky - http://imsky.co
  *
  * Provided under BSD License.
  */
-
 var cssFx = cssFx || {};
-
-/*
- * cssFx process:
- * 
- * fx.fetchCSS - external files
- * fx.processCSS
- * 		fx.fetchCSS - @import
- * 			fx.processCSS
- * 			fx.insertCSS
- * 		fx.processDec - keyframes
- * 		fx.processDec - main CSS
- * 	fx.insertCSS
- * 		
- */
-
 (function (fx) {
 
 	function ajax(url, callback) {
@@ -95,7 +79,7 @@ var cssFx = cssFx || {};
 		return !1
 	}
 
-	function forEach(b, c) {
+	function eachArray(b, c) {
 		for (var d = b.length, a = 0; a < d; a++) c.call(this, b[a])
 	};
 
@@ -126,14 +110,14 @@ var cssFx = cssFx || {};
 	
 	var ms_gradient = "filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='{1}', endColorstr='{2}',GradientType=0)";
 
-	fx.processCSS = function (cssFiles,url) {
+	fx.processCSS = function (css_files,url) {
 		var css_fx_output = [];
 		var css_regex = /([\s\S]*?)\{([\s\S]*?)\}/gim;
 		var import_regex = /\@import\s+(?:url\([\'\"]?(.*)[\'\"]?\))\s*\;?/gim;
 		var keyframes_regex = /@keyframes\s*([^\{]*)\{([^@]*)\}/g;
 
-		for (var x = 0; x < cssFiles.length; x++) {
-			var css = str_combo(cssFiles[x], 1);
+		for (var x = 0; x < css_files.length; x++) {
+			var css = str_combo(css_files[x], 1);
 			var rules = [];
 			var imports = import_regex.test(css) && css.match(import_regex);
 			var keyframes = keyframes_regex.test(css) && css.match(keyframes_regex);
@@ -155,19 +139,17 @@ var cssFx = cssFx || {};
 			//Processing keyframes, removing them from the main CSS, then processing each declaration individually
 			for (var y = 0, g = keyframes.length; y < g; y++) {
 				css = css.replace(keyframes[y], "");
-				var keyframe = keyframes_regex.exec(keyframes[y])
-				if (keyframe) {
+				if (keyframe = keyframes_regex.exec(keyframes[y])) {
 					var kfs = keyframe[2].match(css_regex),
 						kfs_p = [];
 					for (var _k = 0; _k < kfs.length; _k++) {
 						//k[1] = selector, k[2] = rule; just like in standard CSS
-						var k = css_regex.exec(kfs[_k])
-						if (k) {
+						if (k = css_regex.exec(kfs[_k])) {
 							kfs_p.push(str_combo(k[1]) + "{" + fx.processDec(k[2], true) + "}");
 						}
 						css_regex.lastIndex = 0;
 					}
-					forEach([0, 1, 3], function (_r) {
+					eachArray([0, 1, 3], function (_r) {
 						rules.push("@" + prefix[_r] + "keyframes " + str_combo(keyframe[1]) + "{" + kfs_p.join("\n") + "}");
 					})
 				}
@@ -182,9 +164,8 @@ var cssFx = cssFx || {};
 					var selector = str_combo(nextMatch[1], 1);
 					var rule = str_combo(nextMatch[2], 1);
 					for (var _y = 0, _l = supported_rules.length; _y < _l; _y++) {
-						if (rule.indexOf(supported_rules[_y])>=0) {
-							var new_dec = fx.processDec(rule);
-							if (new_dec) {
+						if ( !! ~rule.indexOf(supported_rules[_y])) {
+							if (new_dec = fx.processDec(rule)) {
 								rules.push(selector + "{" + new_dec + "}");
 							}
 							break;
@@ -201,7 +182,6 @@ var cssFx = cssFx || {};
 		}
 		return css_fx_output;
 	}
-	
 	fx.insertCSS = function (output) {
 		for (var x = 0; x < output.length; x++) {
 			var css_fx_output = document.createElement('style');
@@ -217,12 +197,11 @@ var cssFx = cssFx || {};
 		}
 	}
 
-	fx.processDec = function (originalRule, includeAllProperties) {
-		var css_array = originalRule.split(";"),
+	fx.processDec = function (rule, inc) { //the inc parameter is a boolean, deciding whether to include all properties
+		var css_array = rule.split(";"),
 			rules = [];
-			
 		for (var r = 0; r < css_array.length; r++) {
-			if (css_array[r].indexOf(":")>=0) {
+			if ( !! ~css_array[r].indexOf(":")) {
 				var rule = css_array[r].split(":");
 				if (rule.length != 2) {
 					return false;
@@ -243,7 +222,7 @@ var cssFx = cssFx || {};
 				} else if (inArray(property, prefixes0123)) {
 					//-moz, -webkit, -o, -ms
 					//This includes all transition rules
-					forEach([0, 1, 2, 3], function (_r) {
+					eachArray([0, 1, 2, 3], function (_r) {
 						if (property == "transition") {
 							var trans_prop = value.split(" ")[0];
 							if (inArray(trans_prop, prefixed_rules)) {
@@ -257,7 +236,7 @@ var cssFx = cssFx || {};
 								//Only Firefox supports this at the moment
 								var trans_props = value.split(",");
 								var replaced_props = [];
-								forEach(trans_props, function (p) {
+								eachArray(trans_props, function (p) {
 									var prop = str_combo(p);
 									if (inArray(prop, prefixed_rules)) {
 										replaced_props.push(prefix[_r] + prop);
@@ -282,17 +261,15 @@ var cssFx = cssFx || {};
 						new_rules.push(	_moz + "border-radius-" + v[1] + v[2] + ":" + value,
 										_webkit + clean_rule);
 					}
-					
+
 				} else {
 					switch (property) {
 					case "display":
 						if (value == "box") {
-							//display:box
-							forEach([0, 1, 3], function (_r) {
+							eachArray([0, 1, 3], function (_r) {
 								new_rules.push("display:" + prefix[_r] + value)
 							});
 						} else if (value == "inline-block") {
-							//display:inline-block
 							new_rules.push(	"display:" + _moz + "inline-stack",
 											"zoom:1;*display:inline");
 						}
@@ -313,12 +290,12 @@ var cssFx = cssFx || {};
 					case __background + "-color":
 					case __background:
 						var lg = "linear-gradient";
-						if (value.indexOf(lg)>=0) {
+						if ( !! ~value.indexOf(lg)) {
 							var attributes = new RegExp(lg+"\\s?\\((.*)\\)","ig").exec(value);
 							if(attributes[1]!=null){
 								attributes = attributes[1];
 								var prop = lg + "("+attributes+")";
-								forEach([0, 1, 2, 3], function (_r) {
+								eachArray([0, 1, 2, 3], function (_r) {
 									new_rules.push(property + ":" + prefix[_r] + prop);
 								});
 								var attributes_colors = attributes.match(/\#([a-z0-9]{3,})/g);
@@ -326,7 +303,7 @@ var cssFx = cssFx || {};
 									new_rules.push(ms_gradient.replace("{1}",attributes_colors[0]).replace("{2}",attributes_colors[attributes_colors.length-1]));
 								}
 							}
-						} else if (value.indexOf("rgba")>=0) {
+						} else if ( !! ~value.indexOf("rgba")) {
 							//Color array
 							var cA = value.match(/rgba\((.*?)\)/)[1].split(",");
 							var hex = Math.floor(+(str_combo(cA[3])) * 255).toString(16) + rgb2hex(+str_combo(cA[0]), +str_combo(cA[1]), +str_combo(cA[2]));
@@ -334,10 +311,10 @@ var cssFx = cssFx || {};
 						}
 						break;
 					default:
-						if (!!includeAllProperties) {
+						if (inc != null) {
 							new_rules.push(clean_rule);
 						}
-					break;
+						break;
 					}
 				}
 				if (new_rules.length) {
@@ -347,7 +324,6 @@ var cssFx = cssFx || {};
 		}
 		return rules.length && rules.join(";");
 	}
-	
 	fx.fetchCSS = function (file, callback) {
 		ajax(file, (callback == null ?
 		function (f) {
